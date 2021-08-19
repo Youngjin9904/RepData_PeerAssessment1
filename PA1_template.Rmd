@@ -5,21 +5,82 @@ output:
     keep_md: true
 ---
 
-
+```{r setpotions, echo=TRUE}
+library(knitr)
+opts_chunk$set(echo = TRUE, results = TRUE, cache = TRUE)
+```
 ## Loading and preprocessing the data
-
-
+```{r readfile}
+setwd("/Users/youngjinlee/Desktop/Coursera-R")
+data <- read.csv("activity.csv", header=TRUE)
+```
 
 ## What is mean total number of steps taken per day?
-
-
-
+```{r meanMedian1}
+total <- aggregate(steps ~ date, data, FUN=sum)
+hist(total$steps, main="Total Steps per Day", xlab="Number of Steps")
+meansteps <- mean(total$steps, na.rm=TRUE)
+medsteps <- median(total$steps, na.rm=TRUE)
+meansteps
+medsteps
+```
 ## What is the average daily activity pattern?
-
-
+```{r histogram1, fig.height=5, fig.width=7}
+library(ggplot2)
+meanbyint <- aggregate(steps ~ interval, data, mean)
+ggplot(dat = meanbyint, aes(x=interval, y=steps)) + 
+  geom_line() +
+  ggtitle("Average Daily Activity Pattern") +
+  xlab("5 minute Interval") +
+  ylab("Average Number of Steps") +
+  theme(plot.title=element_text(hjust=0.5))
+```
+```{r maxstep}
+maxint <- meanbyint[which.max(meanbyint$steps),]
+maxint
+```
 
 ## Imputing missing values
-
-
+```{r sumImputed}
+missing <- is.na(data$steps)
+imputing_data <- transform(data, steps=ifelse(is.na(data$steps), meanbyint$steps[match(data$interval, meanbyint$interval)],data$steps))
+impbyint <- aggregate(steps ~ date, imputing_data, FUN=sum)
+```
+```{r histogram2, fig.height=5, fig.width=7}
+hist(impbyint$steps,main="Imputed Number of Steps per Day", xlab="Number of Steps")
+```
+```{r meanMedian2}
+impmeansteps <- mean(impbyint$steps, na.rm=TRUE)
+impmedsteps <- median(impbyint$steps, na.rm=TRUE)
+diffmean = impmeansteps - meansteps
+diffmed = impmedsteps - medsteps
+difftot = sum(impbyint$steps) - sum(total$steps)
+impmeansteps
+impmedsteps
+diffmean
+diffmed
+difftot
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r plot, fig.height=5}
+daytype <- function(date) {
+  day <- weekdays(date)
+  if (day %in% c('Monday','Tuesday', 'Wednesday', 'Thursday', 'Friday'))
+    return("weekday")
+  else if (day %in% c('Saturday','Sunday'))
+    return("weekend")
+  else
+    stop("Invalid Date Format")
+}
+imputing_data$date <- as.Date(imputing_data$date)
+imputing_data$day <- sapply(imputing_data$date, FUN = daytype)
+meanbyday <- aggregate(steps ~ interval + day, imputing_data, mean)
+ggplot(dat = meanbyday, aes(x = interval, y = steps)) +
+  geom_line() +
+  facet_grid(day ~ .) +
+  ggtitle("Average Daily Activity Pattern") +
+  xlab("5 minute Interval") +
+  ylab("Average Number of Steps") +
+  theme(plot.title = element_text(hjust=0.5))
+```
